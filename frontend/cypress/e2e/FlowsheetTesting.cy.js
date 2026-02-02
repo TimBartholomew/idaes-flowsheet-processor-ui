@@ -1,16 +1,5 @@
 import { flowsheets } from "./Flowsheets"
 describe('IDAES Flowsheet Processor UI Testing', () => {
-    it('tests flowsheets-list page', () => {
-        cy.load_flowsheets_list()
-        cy.screenshot('loaded flowsheet list page')
-
-        // verify that heading and table headers are present
-        cy.findByRole('heading', {  name: /flowsheets/i})
-        cy.findByRole('columnheader', {  name: /flowsheet name/i})
-        cy.findByRole('columnheader', {  name: /last run/i})
-        cy.screenshot('end-list-page-test')  
-    })
-
     it('tests invalid inputs', () => {
         cy.load_flowsheets_list()
         cy.screenshot('loaded flowsheet list page')

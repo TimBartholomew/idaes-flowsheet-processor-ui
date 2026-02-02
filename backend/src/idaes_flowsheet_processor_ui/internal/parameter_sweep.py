@@ -6,6 +6,7 @@ import idaes.logger as idaeslog
 from pyomo.environ import (
     value as pyovalue,
     units as pyunits,
+    Var,
 )
 
 _log = idaeslog.getLogger(__name__)
@@ -25,14 +26,21 @@ def set_up_sensitivity(m, solve, output_params):
 
     return outputs, optimize_kwargs, opt_function
 
+def convert_units(flowsheet, key, value):
+    try:
+        _log.info(f"start convert_units {key} : {value}")
+        obj = flowsheet.fs_exp.exports[key].obj
+        obj_units = pyunits.get_units(obj)
+        ui_units = flowsheet.fs_exp.exports[key].ui_units
 
-def convert_units(flowsheet, key):
-    variable_obj = flowsheet.fs_exp.exports[key].obj
-    ui_units = flowsheet.fs_exp.exports[key].ui_units
-    new_value = pyovalue(pyunits.convert(variable_obj, to_units=ui_units))
-    return new_value
-
-
+        temp = Var(initialize=value, units=obj_units)
+        temp.construct()
+        crv = pyovalue(pyunits.convert(temp, to_units=ui_units))
+        _log.info(f"end convert_units {key} : {crv}")
+        return crv
+    except Exception as e:
+        _log.info(f"unable to convert_units for {key}: {e}")
+        return value
 
 def run_analysis(
     flowsheet,
@@ -158,16 +166,16 @@ def run_parameter_sweep(flowsheet, info):
         _log.error(f"err: {err}")
         raise HTTPException(500, detail=f"Sweep failed: {err}")
     results_table["values"] = results[0].tolist()
+    num_parameters = len(parameters)
     for value in results_table["values"]:
-        for i in range(1, len(value)):
+        for i in range(len(value)):
             if np.isnan(value[i]):
                 value[i] = None
             else:
                 key = keys[i]
-                value_with_correct_units = convert_units(flowsheet=flowsheet, key=key)
-                # print(f"convert_units produces: {value_with_correct_units} from {pyovalue(flowsheet.fs_exp.exports[key].obj)}")
+                value_with_correct_units = convert_units(flowsheet=flowsheet, key=key, value=value[i])
                 value[i] = value_with_correct_units
     results_table["keys"] = keys
-    results_table["num_parameters"] = len(parameters)
+    results_table["num_parameters"] = num_parameters
     results_table["num_outputs"] = len(output_params)
     return results_table
