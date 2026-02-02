@@ -28,14 +28,18 @@ def set_up_sensitivity(m, solve, output_params):
 
 def convert_units(flowsheet, key, value):
     try:
+        _log.info(f"start convert_units {key} : {value}")
         obj = flowsheet.fs_exp.exports[key].obj
+        obj_units = pyunits.get_units(obj)
         ui_units = flowsheet.fs_exp.exports[key].ui_units
-        temp = Var(initialize=1, units=obj.get_units())
+
+        temp = Var(initialize=value, units=obj_units)
         temp.construct()
         crv = pyovalue(pyunits.convert(temp, to_units=ui_units))
+        _log.info(f"end convert_units {key} : {crv}")
         return crv
     except Exception as e:
-        print(f"unable to convert {key}: {e}")
+        _log.info(f"unable to convert_units for {key}: {e}")
         return value
 
 def run_analysis(
@@ -162,7 +166,6 @@ def run_parameter_sweep(flowsheet, info):
         _log.error(f"err: {err}")
         raise HTTPException(500, detail=f"Sweep failed: {err}")
     results_table["values"] = results[0].tolist()
-    print(f"results[0].tolist(): {results[0].tolist()}")
     num_parameters = len(parameters)
     for value in results_table["values"]:
         for i in range(len(value)):
